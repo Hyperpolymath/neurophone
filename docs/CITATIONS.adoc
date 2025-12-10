@@ -1,0 +1,36 @@
+= neurophone - Citation Guide
+:toc:
+
+== BibTeX
+
+[source,bibtex]
+----
+@software{neurophone_2025,
+  author = {Polymath, Hyper},
+  title = {neurophone},
+  year = {2025},
+  url = {https://github.com/hyperpolymath/neurophone},
+  license = {AGPL-3.0-or-later}
+}
+----
+
+== Harvard Style
+
+Polymath, H. (2025) _neurophone_ [Computer software]. Available at: https://github.com/hyperpolymath/neurophone
+
+== OSCOLA
+
+Hyper Polymath, 'neurophone' (2025) <https://github.com/hyperpolymath/neurophone>
+
+== MLA
+
+Polymath, Hyper. "neurophone." 2025, github.com/hyperpolymath/neurophone.
+
+== APA 7
+
+Polymath, H. (2025). _neurophone_ [Computer software]. GitHub. https://github.com/hyperpolymath/neurophone
+
+== See Also
+
+* link:../CITATION.cff[CITATION.cff]
+* link:../codemeta.json[codemeta.json]
