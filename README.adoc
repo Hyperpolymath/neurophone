@@ -1,134 +1,244 @@
-= NeuroPhone - NeuroSymbolic AI for Mobile
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
+= NeuroPhone - Neurosymbolic AI Android Application
+:toc:
+:toclevels: 3
 
-A neurosymbolic AI system for Oppo Reno 13 (and other Android devices) that combines:
-- *LSM (Liquid State Machine)* - Spiking neural network reservoir for temporal sensor processing
-- *ESN (Echo State Network)* - Echo state reservoir for state prediction
-- *Bridge* - State encoding/decoding between neural and symbolic components
-- *Local LLM (Llama 3.2)* - On-device language model for privacy-preserving AI
-- *Claude API* - Cloud fallback for complex reasoning tasks
+image:https://img.shields.io/badge/Platform-Android-green[Platform]
+image:https://img.shields.io/badge/Device-Oppo%20Reno%2013-blue[Target Device]
+image:https://img.shields.io/badge/RSR-Bronze-cd7f32[RSR Compliance]
+image:https://img.shields.io/badge/license-MIT-blue[License]
 
-== Architecture
+== What This Is
+
+**neurophone** is a complete *Android application* for neurosymbolic AI on mobile devices. It combines spiking neural networks with large language models for on-device intelligence.
+
+IMPORTANT: This is an *application*, NOT a library. For the underlying platform-agnostic routing library, see link:https://github.com/hyperpolymath/heterogenous-mobile-computing[mobile-ai-orchestrator].
+
+== Target Device
+
+Primary target: **Oppo Reno 13** (MediaTek Dimensity 8350)
+
+* 12GB RAM
+* NPU acceleration available
+* Android 14+
+
+Also compatible with Android 8.0+ devices with 4GB+ RAM.
+
+== Core Purpose
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Oppo Reno 13                            │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐  │
-│  │  Sensors    │─────▶│    LSM      │─────▶│   Bridge    │  │
-│  │  (temporal  │      │  (spiking   │      │  (state     │  │
-│  │   input)    │      │  reservoir) │      │  encoding)  │  │
-│  └─────────────┘      └─────────────┘      └──────┬──────┘  │
-│                                                   │         │
-│                                                   ▼         │
-│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐  │
-│  │   Output    │◀─────│    ESN      │◀────▶│    LLM      │  │
-│  │  (actions)  │      │  (echo      │      │ (Llama 3.2) │  │
-│  │             │      │  reservoir) │      │             │  │
-│  └─────────────┘      └─────────────┘      └─────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      NEUROPHONE                                 │
+│                   (THIS APPLICATION)                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐     │
+│  │  Sensors    │─────▶│    LSM      │─────▶│   Bridge    │     │
+│  │ Accel/Gyro  │      │  (spiking   │      │  (state     │     │
+│  │ Light/Prox  │      │  reservoir) │      │  encoding)  │     │
+│  └─────────────┘      └─────────────┘      └──────┬──────┘     │
+│                                                   │            │
+│                                                   ▼            │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐     │
+│  │   Output    │◀─────│    ESN      │◀────▶│    LLM      │     │
+│  │  (actions)  │      │  (echo      │      │ (Llama 3.2) │     │
+│  │             │      │  reservoir) │      │             │     │
+│  └─────────────┘      └─────────────┘      └─────────────┘     │
+│                                                                 │
+│  Processes: Sensor data → Neural interpretation → LLM query    │
+│  Runs: ON THE DEVICE, with cloud fallback                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
                               │
                               ▼ (cloud fallback)
                     ┌─────────────────────┐
-                    │      Claude         │
+                    │      Claude API     │
                     │  (complex queries)  │
                     └─────────────────────┘
 ```
 
-== Project Structure
+== Key Differentiators
+
+|===
+| Feature | This App | Typical Mobile AI Apps
+
+| *Neural Processing*
+| On-device LSM + ESN (spiking networks)
+| Cloud-only or simple TFLite
+
+| *Sensor Integration*
+| Real-time sensor → neural → LLM pipeline
+| Separate sensor and AI components
+
+| *LLM*
+| Local Llama 3.2 + Claude fallback
+| Cloud-only
+
+| *Latency*
+| <100ms local inference
+| 500ms+ network round-trip
+
+| *Privacy*
+| Sensor data stays on device
+| Often sent to cloud
+|===
+
+== Architecture
+
+=== Rust Crates (8 modules)
+
+|===
+| Crate | Purpose | Key Features
+
+| `lsm`
+| Liquid State Machine
+| 512 spiking neurons, 3D grid, 1kHz processing
+
+| `esn`
+| Echo State Network
+| 300-neuron reservoir, ridge regression
+
+| `bridge`
+| Neural ↔ Symbolic
+| State encoding, context generation
+
+| `sensors`
+| Phone Sensors
+| Accel, gyro, magnetometer, light, proximity
+
+| `llm`
+| Local Inference
+| Llama 3.2 via llama.cpp, streaming
+
+| `claude-client`
+| Cloud Fallback
+| Claude API, retry logic, context injection
+
+| `neurophone-core`
+| Orchestration
+| Main coordinator, query routing
+
+| `neurophone-android`
+| Android JNI
+| Kotlin ↔ Rust bridge
+|===
+
+=== Android App (Kotlin)
 
 ```
-neurophone/
-├── Cargo.toml                    # Rust workspace
-├── crates/
-│   ├── lsm/                      # Liquid State Machine (spiking neurons)
-│   ├── esn/                      # Echo State Network (reservoir)
-│   ├── bridge/                   # State encoding/context generation
-│   ├── sensors/                  # Phone sensor processing
-│   ├── llm/                      # Local LLM (Llama 3.2) interface
-│   ├── claude-client/            # Claude API client
-│   ├── neurophone-core/          # Main orchestrator
-│   └── neurophone-android/       # Android JNI bindings
-├── android/                      # Android app (Kotlin)
-│   └── app/
-│       └── src/main/
-│           ├── java/ai/neurophone/
-│           └── res/
-├── scripts/
-│   ├── setup.sh                  # Development setup
-│   └── build-android.sh          # Cross-compile for Android
-└── config/
-    └── default.toml              # Default configuration
+android/
+├── app/src/main/
+│   ├── java/ai/neurophone/
+│   │   ├── MainActivity.kt
+│   │   ├── NativeLib.kt          # JNI interface
+│   │   ├── SensorManager.kt      # Sensor collection
+│   │   └── ui/                   # Compose UI
+│   └── res/
+└── build.gradle.kts
 ```
 
 == Components
 
 === LSM (Liquid State Machine)
-- 3D grid of Leaky Integrate-and-Fire neurons (default: 8x8x8 = 512 neurons)
-- Distance-dependent connectivity
-- Excitatory and inhibitory neurons
-- Real-time spike processing at 1kHz
+
+Spiking neural network for temporal sensor processing:
+
+* 3D grid: 8×8×8 = 512 Leaky Integrate-and-Fire neurons
+* Distance-dependent connectivity
+* Excitatory/inhibitory balance
+* Real-time spike processing at 1kHz
 
 === ESN (Echo State Network)
-- 300-neuron reservoir with 0.95 spectral radius
-- Leaky integrator dynamics
-- Ridge regression for output training
-- Hierarchical ESN support
 
-=== Bridge
-- Integrates LSM and ESN states
-- Generates natural language context for LLMs
-- Temporal pattern detection
-- Salience and urgency computation
+Reservoir for state prediction:
+
+* 300-neuron reservoir
+* Spectral radius: 0.95
+* Leaky integrator dynamics
+* Ridge regression output
 
 === Sensors
-- Accelerometer, gyroscope, magnetometer
-- Light, proximity sensors
-- IIR filtering (low-pass, high-pass)
-- Feature extraction at 50Hz
+
+Phone sensor integration:
+
+* Accelerometer, gyroscope, magnetometer
+* Light and proximity sensors
+* IIR filtering (low-pass, high-pass)
+* Feature extraction at 50Hz
+
+=== Bridge
+
+Neural ↔ Symbolic translation:
+
+* Integrates LSM + ESN states
+* Generates natural language context for LLMs
+* Temporal pattern detection
+* Salience and urgency computation
 
 === Local LLM
-- Llama 3.2 1B/3B support via llama.cpp
-- Optimized for Dimensity 8350
-- Chat templates and streaming
-- Neural context injection
+
+On-device language model:
+
+* Llama 3.2 1B/3B via llama.cpp
+* Optimized for Dimensity 8350
+* Q4_K_M quantization (~700MB)
+* Neural context injection
 
 === Claude Client
-- Messages API integration
-- Automatic retry with exponential backoff
-- Hybrid inference (local/cloud decision)
-- Neural state context injection
+
+Cloud fallback for complex queries:
+
+* Messages API integration
+* Automatic retry with exponential backoff
+* Hybrid inference (local/cloud decision)
+* Neural state context injection
 
 == Getting Started
 
 === Prerequisites
 
-- Rust 1.75+
-- Android NDK 26+
-- Android Studio (for app development)
-- Oppo Reno 13 or Android 8.0+ device
+* Rust 1.75+
+* Android NDK 26+
+* Android Studio (for app development)
+* Oppo Reno 13 or Android 8.0+ device
 
-=== Setup
+=== Build
 
 ```bash
-= Clone and setup
+# Clone
+git clone https://github.com/hyperpolymath/neurophone
 cd neurophone
+
+# Setup
 ./scripts/setup.sh
 
-= Build native libraries
+# Build native libraries for Android
 ./scripts/build-android.sh
 
-= Open Android project
-= android/ folder in Android Studio
+# Open android/ in Android Studio
 ```
 
-=== Configuration
+=== Download LLM Model
 
-Set your Claude API key:
+```bash
+# Download Llama 3.2 1B Instruct (Q4_K_M, ~700MB)
+# From: https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF
+
+# Push to device
+adb push llama-3.2-1b-instruct-q4_k_m.gguf /data/local/tmp/
+```
+
+=== Configure
+
+Set Claude API key (for cloud fallback):
+
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
 ```
 
-Or configure in `config/default.toml`:
+Or in `config/default.toml`:
+
 ```toml
 [claude]
 api_key = "your-api-key"
@@ -140,21 +250,9 @@ n_threads = 4
 context_size = 2048
 ```
 
-=== Download LLM Model
-
-For on-device inference, download a quantized Llama 3.2 model:
-
-```bash
-= Example: Llama 3.2 1B Instruct Q4_K_M (~700MB)
-= From: https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF
-
-= Push to device
-adb push llama-3.2-1b-instruct-q4_k_m.gguf /data/local/tmp/
-```
-
 == Usage
 
-=== Basic Query
+=== Kotlin API
 
 ```kotlin
 // Initialize
@@ -162,63 +260,17 @@ NativeLib.init()
 NativeLib.start()
 
 // Query with neural context
-val response = NativeLib.query("What's the current activity?", preferLocal = true)
-```
+val response = NativeLib.query("What's my current activity?", preferLocal = true)
 
-=== Direct Neural Context
-
-```kotlin
+// Get raw neural state
 val context = NativeLib.getNeuralContext()
-// Returns formatted neural state:
-// [NEURAL_STATE]
-// Description: Neural state: moderately active (salience: 0.45)
-// Context: Recent activity level: 0.38. Detected patterns: oscillation
-// ...
-// [/NEURAL_STATE]
+// Returns: [NEURAL_STATE] Description: ... [/NEURAL_STATE]
+
+// Cleanup
+NativeLib.stop()
 ```
 
-=== Sensor Processing
-
-```kotlin
-// Sensors are automatically processed when system is running
-// Access via neural context or state JSON
-val state = NativeLib.getState() // JSON string
-```
-
-== Performance
-
-Optimized for Oppo Reno 13 (Dimensity 8350):
-
-| Component | Latency | Notes |
-|-----------|---------|-------|
-| Sensor processing | <1ms | 50Hz loop |
-| LSM step | <2ms | 512 neurons |
-| ESN step | <1ms | 300 neurons |
-| Bridge integration | <1ms | Per step |
-| Local LLM (1B) | 50-100ms/token | Q4 quantized |
-| Claude API | 500-2000ms | Network dependent |
-
-== API Reference
-
-=== Kotlin/Android
-
-```kotlin
-object NativeLib {
-    fun init(configJson: String? = null): Boolean
-    fun start(): Boolean
-    fun stop()
-    fun processSensor(sensorType: Int, values: FloatArray, timestamp: Long, accuracy: Int): Boolean
-    fun queryLocal(message: String): String
-    fun queryClaude(message: String): String
-    fun query(message: String, preferLocal: Boolean = true): String
-    fun getNeuralContext(): String
-    fun getState(): String
-    fun reset()
-    fun isRunning(): Boolean
-}
-```
-
-=== Rust
+=== Rust API
 
 ```rust
 use neurophone_core::{NeuroSymbolicSystem, SystemConfig};
@@ -236,10 +288,137 @@ let response = system.query("What's happening?", true).await?;
 let context = system.get_neural_context().await;
 ```
 
+== Performance
+
+Optimized for Oppo Reno 13 (Dimensity 8350):
+
+|===
+| Component | Latency | Notes
+
+| Sensor processing
+| <1ms
+| 50Hz loop
+
+| LSM step
+| <2ms
+| 512 neurons
+
+| ESN step
+| <1ms
+| 300 neurons
+
+| Bridge integration
+| <1ms
+| Per step
+
+| Local LLM (1B)
+| 50-100ms/token
+| Q4 quantized
+
+| Claude API
+| 500-2000ms
+| Network dependent
+|===
+
+== Relationship to mobile-ai-orchestrator
+
+This application and link:https://github.com/hyperpolymath/heterogenous-mobile-computing[mobile-ai-orchestrator] are complementary:
+
+|===
+| | neurophone | mobile-ai-orchestrator
+
+| *Type*
+| Application
+| Library
+
+| *Platform*
+| Android-specific
+| Platform-agnostic
+
+| *Focus*
+| Sensor → Neural → LLM pipeline
+| AI routing decisions
+
+| *Neural*
+| LSM, ESN (spiking networks)
+| MLP, Reservoir (routing)
+
+| *Use Case*
+| Run on phone, process sensors
+| Embed in any app for routing
+|===
+
+**Future integration**: neurophone may adopt mobile-ai-orchestrator for its routing decisions, combining:
+
+* neurophone's sensor processing + neural interpretation
+* mobile-ai-orchestrator's intelligent local/cloud routing
+
+== Related Projects
+
+|===
+| Project | Relationship | Description
+
+| link:https://github.com/hyperpolymath/heterogenous-mobile-computing[*mobile-ai-orchestrator*]
+| *Complementary library*
+| Platform-agnostic AI routing (may integrate)
+
+| link:https://github.com/hyperpolymath/echomesh[echomesh]
+| Related
+| Conversation context preservation
+
+| link:https://github.com/hyperpolymath/oblibeny[oblibeny]
+| Related
+| Safety-critical programming concepts
+|===
+
+== RSR Compliance
+
+Bronze-level RSR (Rhodium Standard Repository) compliance:
+
+* Type safety (Rust)
+* Memory safety (ownership model)
+* Comprehensive documentation
+* Build automation
+* Security policy
+
+== Development
+
+```bash
+# Run tests
+cargo test
+
+# Build for Android
+./scripts/build-android.sh
+
+# Generate docs
+cargo doc --open
+```
+
+== Contributing
+
+Contributions welcome! See link:CONTRIBUTING.md[CONTRIBUTING.md].
+
 == License
 
 MIT License - See LICENSE file
 
-== Contributing
+== Citation
 
-Contributions welcome! Please read CONTRIBUTING.md first.
+```bibtex
+@software{neurophone_2025,
+  author = {Jewell, Jonathan D.A.},
+  title = {NeuroPhone: Neurosymbolic AI Android Application},
+  year = {2025},
+  url = {https://github.com/hyperpolymath/neurophone},
+  note = {On-device LSM + ESN + LLM}
+}
+```
+
+== Contact
+
+* *Author*: Jonathan D.A. Jewell
+* *Email*: hyperpolymath@protonmail.com
+
+---
+
+*Android Application • On-Device Neural Processing • Spiking Networks • Local LLM*
